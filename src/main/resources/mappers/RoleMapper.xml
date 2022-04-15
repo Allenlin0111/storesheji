@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ajie.mapper.RoleMapper">
+
+    <resultMap id="roleMap" type="com.ajie.entity.Role">
+        <id column="id"  property="id"/>
+        <result column="name"  property="name"/>
+        <result column="remark"  property="remark"/>
+    </resultMap>
+
+    <resultMap id="roleAndPremissionsMap" type="com.ajie.entity.Role" extends="roleMap">
+        <collection property="menus" column="id" select="menusList" ofType="com.ajie.entity.Menu"/>
+        <collection property="premissions" column="id" select="premissionsList" ofType="com.ajie.entity.Premission"/>
+    </resultMap>
+
+    <resultMap id="menusMap" type="com.ajie.entity.Menu">
+        <id column="id"  property="id"/>
+        <result column="title"  property="title"/>
+        <result column="path"  property="path"/>
+        <result column="icon"  property="icon"/>
+        <result column="url" property="url"/>
+        <result column="component" property="component"/>
+        <result column="require_auth" property="requireAuth"/>
+        <collection  property="children" select="findChildrenMenu" column="id" ofType="com.ajie.entity.Menu"/>
+    </resultMap>
+
+    <!-- 根据用户ID查询对应的权限 -->
+    <select id="findByUserId" parameterType="int" resultMap="roleMap">
+        SELECT
+            r.*
+        FROM
+            role r
+            INNER JOIN users_roles ur ON r.id = ur.role_id
+        WHERE
+            ur.user_id = #{userId}
+    </select>
+
+    <!-- 查询所有权限 -->
+    <select id="findAll" resultType="com.ajie.entity.Role">
+        select * from role
+    </select>
+
+    <!-- 分页查询所有角色 -->
+    <select id="findPage" parameterType="java.lang.String" resultMap="roleAndPremissionsMap">
+        SELECT
+            a.id, a.`name`, a.remark
+        FROM
+            role a
+        <if test="queryString != null and queryString.length > 0">
+            where a.`name` like concat('%', #{queryString}, '%') or a.remark like concat('%', #{queryString}, '%')
+        </if>
+    </select>
+
+    <!-- 根据角色ID查询对应的菜单信息 -->
+    <select id="menusList" parameterType="int" resultType="com.ajie.entity.Menu" resultMap="menusMap">
+        select * from menu where parent_id is null and id in (select menu_id from roles_menus where role_id = #{roleId})
+    </select>
+
+    <!-- 查询子菜单 -->
+    <select id="findChildrenMenu" parameterType="int" resultType="com.ajie.entity.Menu">
+        select * from menu where parent_id = #{id}
+    </select>
+
+    <!-- 根据角色ID查询对应的权限信息 -->
+    <select id="premissionsList" parameterType="int" resultType="com.ajie.entity.Premission">
+        SELECT
+            id, `name`, permission
+        FROM
+            permission
+        WHERE
+            id IN
+            (SELECT
+                    permission_id
+                FROM
+                    roles_permissions
+            WHERE
+                role_id = #{roleId})
+    </select>
+
+    <!-- 添加角色信息 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.ajie.entity.Role">
+        insert into role(`name`, remark) values(#{name}, #{remark})
+    </insert>
+
+    <!-- 修改角色信息 -->
+    <update id="update" parameterType="com.ajie.entity.Role">
+        update role
+        <set>
+            <if test="name != null">
+                `name` = #{name},
+            </if>
+            <if test="remark != null">
+                remark = #{remark}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 删除角色信息 -->
+    <delete id="delete" parameterType="int">
+        delete from role where id = #{id}
+    </delete>
+
+    <!-- 查询所有权限 -->
+    <select id="findPermissions" resultType="com.ajie.entity.Premission">
+        select * from permission
+    </select>
+
+    <!-- 添加角色权限 -->
+    <insert id="insertPermissions">
+        insert into roles_permissions(role_id, permission_id) values(#{roleId}, #{permissionId})
+    </insert>
+
+    <!-- 根据角色ID删除对应权限信息 -->
+    <delete id="deleteByRoleId">
+        delete from roles_permissions where role_id = #{roleId}
+    </delete>
+
+    <insert id="insertMenus">
+        insert into roles_menus(role_id, menu_id) values(#{roleId}, #{menuId})
+    </insert>
+
+    <delete id="deleteByMenuId">
+        delete from roles_menus where role_id = #{roleId}
+    </delete>
+</mapper>

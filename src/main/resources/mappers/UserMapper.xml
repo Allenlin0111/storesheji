@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ajie.mapper.UserMapper">
+
+    <resultMap id="mainMap" type="com.ajie.entity.EasyUser">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="email" property="email"/>
+        <result column="nick_name" property="nickName"/>
+        <result column="sex" property="sex"/>
+        <result column="state" property="state"/>
+        <result column="address" property="address"/>
+        <result column="phone_number" property="phoneNumber"/>
+        <result column="avatar_url" property="avatarUrl"/>
+        <collection select="selectRole" column="id" ofType="com.ajie.entity.Role" property="roles"/>
+    </resultMap>
+
+    <resultMap id="roleMap" type="com.ajie.entity.Role">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="remark" property="remark"/>
+        <collection property="premissions" select="selectPermission" column="id" ofType="com.ajie.entity.Premission"/>
+    </resultMap>
+
+    <!-- 分页查询 -->
+    <select id="findPage" parameterType="java.lang.String" resultMap="mainMap">
+        SELECT
+            *
+        FROM
+            easyuser
+        <if test="queryString != null and queryString.length > 0">
+            where username like concat('%', #{queryString}, '%') or `nick_name` like concat('%', #{queryString}, '%')
+        </if>
+    </select>
+
+    <select id="selectRole" parameterType="int" resultMap="roleMap">
+        select * from role where id in(select role_id from users_roles where user_id = #{userId})
+    </select>
+
+    <select id="selectPermission" parameterType="int" resultType="com.ajie.entity.Premission">
+        select * from permission where id in (select permission_id from roles_permissions where role_id = #{roleId})
+    </select>
+
+    <!-- 登录 -->
+    <select id="findUserByName" parameterType="String" resultMap="mainMap">
+        select * from easyuser where username = #{username}
+    </select>
+
+    <!-- 登录 -->
+    <select id="findUserByPhone" parameterType="String" resultMap="mainMap">
+        select * from easyuser where phone_number = #{phoneNumber}
+    </select>
+
+    <!-- 根据编号查询用户信息 -->
+    <select id="findById" parameterType="int" resultMap="mainMap">
+        select * from easyuser where id = #{userId}
+    </select>
+
+    <!-- 根据角色编号查询用户信息 -->
+    <select id="findByRoleId" parameterType="int" resultMap="mainMap">
+        select * from easyuser where id = (select user_id from users_roles where role_id = #{roleId})
+    </select>
+
+    <!-- 根据角色编号查询用户信息 -->
+    <select id="findByPermissionId" parameterType="int" resultMap="mainMap">
+        select u.* from easyuser u
+        inner join users_roles ur on u.id = ur.user_id
+        inner join roles_permissions rp on ur.role_id = rp.role_id
+        where rp.permission_id = #{permissionId}
+    </select>
+
+    <!-- 修改用户信息 -->
+    <update id="update">
+        update easyuser
+        <set>
+            <if test="password != null and password.length > 0">
+                password = #{password},
+            </if>
+            <if test="email != null and email.length > 0">
+                email = #{email},
+            </if>
+            <if test="nickName != null and nickName.length > 0">
+                nick_name = #{nickName},
+            </if>
+            <if test="state != null">
+                state = #{state},
+            </if>
+            <if test="openId != null and openId.length > 0">
+                open_id = #{openId},
+            </if>
+            <if test="avatarUrl != null and avatarUrl.length > 0">
+                avatar_url = #{avatarUrl},
+            </if>
+            <if test="address != null and address.length > 0">
+                address = #{address},
+            </if>
+            <if test="sex != null">
+                sex = #{sex},
+            </if>
+            <if test="phoneNumber != null">
+                phone_number = #{phoneNumber}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 添加用户 -->
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        insert into
+            easyuser(username, password, email, avatar_url, nick_name, register_time, open_id, address, sex, phone_number)
+        values
+        (#{username}, #{password}, #{email}, #{avatarUrl}, #{nickName}, now(), #{openId}, #{address}, #{sex}, #{phoneNumber})
+    </insert>
+
+    <!-- 查询会员数量 -->
+    <select id="findByTime" resultType="java.util.Map">
+        SELECT
+            MONTH(register_time) timeData,
+            count( 1 ) valueData
+        FROM
+            easyuser
+        WHERE
+            register_time &gt;= #{beginTime}
+        AND
+            register_time &lt;= #{endTime}
+        GROUP BY
+            MONTH (register_time)
+    </select>
+
+    <insert id="insertRole">
+        insert users_roles(user_id, role_id) values(#{userId}, #{roleId})
+    </insert>
+
+    <delete id="deleteRole">
+        delete from users_roles where user_id = #{userId}
+    </delete>
+</mapper>

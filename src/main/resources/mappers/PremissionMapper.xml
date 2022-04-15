@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ajie.mapper.PremissionMapper">
+
+    <resultMap id="roleMap" type="com.ajie.entity.Premission">
+        <id column="id"  property="id"/>
+        <result column="name"  property="name"/>
+        <result column="premission"  property="premission"/>
+    </resultMap>
+
+    <!-- 分页查询所有权限 -->
+    <select id="findPage" parameterType="java.lang.String" resultMap="roleMap">
+        SELECT
+            *
+        FROM
+            permission
+        <if test="queryString != null and queryString.length > 0">
+            where `name` like concat('%', #{queryString}, '%') or permission like concat('%', #{queryString}, '%')
+        </if>
+    </select>
+    
+    <!-- 添加权限信息 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="com.ajie.entity.Premission">
+        insert into permission(`name`, premission) values(#{name}, #{permission})
+    </insert>
+
+    <!-- 修改角色信息 -->
+    <update id="update" parameterType="com.ajie.entity.Premission">
+        update permission
+        <set>
+            <if test="name != null">
+                `name` = #{name},
+            </if>
+            <if test="permission != null">
+                permission = #{permission}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!-- 删除角色信息 -->
+    <delete id="delete" parameterType="int">
+        delete from permission where id = #{id}
+    </delete>
+
+    <!-- 添加角色权限 -->
+    <insert id="insertPremission">
+        call insertPremission(#{premissionId})
+    </insert>
+</mapper>
