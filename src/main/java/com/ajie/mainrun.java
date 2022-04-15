@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * 主程序的入口
  * @author ajie
+ * 2022
  */
 @MapperScan("com.ajie.mapper")
 @SpringBootApplication
